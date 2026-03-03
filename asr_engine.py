@@ -121,6 +121,8 @@ class ASREngine:
                 dtype=dtype,
                 device_map=actual_device if actual_device == "cuda" else "cpu",
                 max_inference_batch_size=1,
+                revision="main",
+                local_files_only=True,
             )
             logger.debug("模型加载完成")
 
