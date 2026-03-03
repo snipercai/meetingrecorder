@@ -1,0 +1,23 @@
+# 音频采集
+pyaudio>=0.2.14
+
+# WebSocket通信
+websockets>=12.0
+
+# 轻量级Web框架
+aiohttp>=3.9.0
+
+# HTTP请求
+requests>=2.28.0
+
+# PyTorch，用于模型推理
+torch>=2.1.0
+
+# Qwen3-ASR模型库
+qwen-asr>=0.1.0
+
+# 数值计算
+numpy>=1.24.0
+
+# 音频文件处理
+soundfile>=0.12.0

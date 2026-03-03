@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>会议转写系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #1a1a2e;
+            color: #eaeaea;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #3a3a5a;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: #fff;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #ff4757;
+            transition: background-color 0.3s;
+        }
+
+        .status-dot.connected {
+            background-color: #2ed573;
+        }
+
+        .status-dot.connecting {
+            background-color: #ffa502;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            height: calc(100vh - 140px);
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+        }
+
+        .panel {
+            background-color: #16213e;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .panel-title {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #a0a0c0;
+        }
+
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background-color: #4a69bd;
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background-color: #5a79cd;
+        }
+
+        .btn-danger {
+            background-color: #e74c3c;
+            color: #fff;
+        }
+
+        .btn-danger:hover {
+            background-color: #f75c4c;
+        }
+
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            background-color: #0f0f23;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .transcription-item {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #2a2a4a;
+        }
+
+        .transcription-item:last-child {
+            border-bottom: none;
+        }
+
+        .timestamp {
+            font-size: 0.8rem;
+            color: #6a6a8a;
+            margin-bottom: 4px;
+        }
+
+        .transcription-text {
+            color: #e0e0e0;
+        }
+
+        .summary-content {
+            white-space: pre-wrap;
+            color: #e0e0e0;
+        }
+
+        .empty-state {
+            color: #6a6a8a;
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0f0f23;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #3a3a5a;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4a4a6a;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>会议转写系统</h1>
+            <div class="status-indicator">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">未连接</span>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">实时转写</span>
+                    <button class="btn btn-danger" id="clearBtn">清空记录</button>
+                </div>
+                <div class="content-area" id="transcriptionArea">
+                    <div class="empty-state">等待转写内容...</div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">会议总结</span>
+                    <button class="btn btn-primary" id="copyBtn">复制总结</button>
+                </div>
+                <div class="content-area" id="summaryArea">
+                    <div class="empty-state">等待生成总结...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM 元素引用
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const transcriptionArea = document.getElementById('transcriptionArea');
+        const summaryArea = document.getElementById('summaryArea');
+        const clearBtn = document.getElementById('clearBtn');
+        const copyBtn = document.getElementById('copyBtn');
+
+        // WebSocket 配置 - 动态获取当前页面的主机地址
+        const WS_URL = `ws://${window.location.host}/ws`;
+        let ws = null;
+        let reconnectTimer = null;
+        const RECONNECT_INTERVAL = 3000; // 重连间隔 3 秒
+
+        // 是否有内容的标记
+        let hasTranscription = false;
+        let hasSummary = false;
+        
+        // 当前段落的累积文字
+        let currentParagraphText = "";
+        let currentParagraphElement = null;
+        let currentParagraphStartTime = null;
+
+        // 更新连接状态显示
+        function updateStatus(status) {
+            statusDot.className = 'status-dot';
+            
+            switch (status) {
+                case 'connected':
+                    statusDot.classList.add('connected');
+                    statusText.textContent = '已连接';
+                    break;
+                case 'connecting':
+                    statusDot.classList.add('connecting');
+                    statusText.textContent = '连接中...';
+                    break;
+                case 'disconnected':
+                default:
+                    statusText.textContent = '未连接';
+                    break;
+            }
+        }
+
+        // 格式化时间戳
+        function formatTimestamp(isoString) {
+            const date = new Date(isoString);
+            const hours = date.getHours().toString().padStart(2, '0');
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            const seconds = date.getSeconds().toString().padStart(2, '0');
+            return `${hours}:${minutes}:${seconds}`;
+        }
+
+        // 添加转写内容 - 追加到当前段落
+        function addTranscription(content, timestamp) {
+            // 首次添加内容时清除占位符
+            if (!hasTranscription) {
+                transcriptionArea.innerHTML = '';
+                hasTranscription = true;
+                currentParagraphText = "";
+                currentParagraphElement = null;
+            }
+
+            // 如果没有当前段落，创建一个新段落
+            if (!currentParagraphElement) {
+                currentParagraphElement = document.createElement('div');
+                currentParagraphElement.className = 'transcription-item';
+                currentParagraphStartTime = timestamp;
+                currentParagraphElement.innerHTML = `
+                    <div class="timestamp">${formatTimestamp(timestamp)}</div>
+                    <div class="transcription-text"></div>
+                `;
+                transcriptionArea.appendChild(currentParagraphElement);
+            }
+
+            // 追加文字到当前段落
+            currentParagraphText += content;
+            const textDiv = currentParagraphElement.querySelector('.transcription-text');
+            if (textDiv) {
+                textDiv.textContent = currentParagraphText;
+            }
+            
+            // 自动滚动到底部
+            transcriptionArea.scrollTop = transcriptionArea.scrollHeight;
+        }
+
+        // 开始新段落（在总结后调用）
+        function startNewParagraph() {
+            currentParagraphText = "";
+            currentParagraphElement = null;
+            currentParagraphStartTime = null;
+        }
+
+        // 更新总结内容
+        function updateSummary(content, timestamp) {
+            // 首次添加内容时清除占位符
+            if (!hasSummary) {
+                summaryArea.innerHTML = '';
+                hasSummary = true;
+            }
+
+            const summaryDiv = document.createElement('div');
+            summaryDiv.className = 'summary-content';
+            summaryDiv.innerHTML = `<div class="timestamp" style="margin-bottom: 10px;">更新时间: ${formatTimestamp(timestamp)}</div>${escapeHtml(content)}`;
+            
+            summaryArea.innerHTML = '';
+            summaryArea.appendChild(summaryDiv);
+            
+            // 总结更新后，开始新的转写段落
+            startNewParagraph();
+        }
+
+        // HTML 转义，防止 XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 处理接收到的消息
+        function handleMessage(data) {
+            const message = JSON.parse(data);
+            
+            switch (message.type) {
+                case 'transcription':
+                    addTranscription(message.content, message.timestamp);
+                    break;
+                case 'summary':
+                    updateSummary(message.content, message.timestamp);
+                    break;
+                default:
+                    console.log('未知消息类型:', message.type);
+            }
+        }
+
+        // 连接 WebSocket
+        function connectWebSocket() {
+            if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+                return;
+            }
+
+            updateStatus('connecting');
+
+            try {
+                ws = new WebSocket(WS_URL);
+
+                ws.onopen = function() {
+                    console.log('WebSocket 已连接');
+                    updateStatus('connected');
+                    // 清除重连定时器
+                    if (reconnectTimer) {
+                        clearTimeout(reconnectTimer);
+                        reconnectTimer = null;
+                    }
+                };
+
+                ws.onmessage = function(event) {
+                    handleMessage(event.data);
+                };
+
+                ws.onclose = function(event) {
+                    console.log('WebSocket 已断开:', event.code, event.reason);
+                    updateStatus('disconnected');
+                    // 自动重连
+                    scheduleReconnect();
+                };
+
+                ws.onerror = function(error) {
+                    console.error('WebSocket 错误:', error);
+                    updateStatus('disconnected');
+                };
+            } catch (error) {
+                console.error('WebSocket 连接失败:', error);
+                updateStatus('disconnected');
+                scheduleReconnect();
+            }
+        }
+
+        // 安排重连
+        function scheduleReconnect() {
+            if (reconnectTimer) {
+                return;
+            }
+            reconnectTimer = setTimeout(function() {
+                reconnectTimer = null;
+                connectWebSocket();
+            }, RECONNECT_INTERVAL);
+        }
+
+        // 清空转写记录
+        clearBtn.addEventListener('click', function() {
+            transcriptionArea.innerHTML = '<div class="empty-state">等待转写内容...</div>';
+            hasTranscription = false;
+        });
+
+        // 复制总结
+        copyBtn.addEventListener('click', function() {
+            if (!hasSummary) {
+                alert('暂无总结内容');
+                return;
+            }
+
+            const summaryText = summaryArea.querySelector('.summary-content');
+            if (summaryText) {
+                navigator.clipboard.writeText(summaryText.textContent.replace(/^更新时间:.*\n/, ''))
+                    .then(function() {
+                        copyBtn.textContent = '已复制!';
+                        setTimeout(function() {
+                            copyBtn.textContent = '复制总结';
+                        }, 2000);
+                    })
+                    .catch(function(err) {
+                        console.error('复制失败:', err);
+                        alert('复制失败，请手动复制');
+                    });
+            }
+        });
+
+        // 页面加载完成后连接 WebSocket
+        document.addEventListener('DOMContentLoaded', function() {
+            connectWebSocket();
+        });
+
+        // 页面关闭时断开连接
+        window.addEventListener('beforeunload', function() {
+            if (ws) {
+                ws.close();
+            }
+            if (reconnectTimer) {
+                clearTimeout(reconnectTimer);
+            }
+        });
+    </script>
+</body>
+</html>
