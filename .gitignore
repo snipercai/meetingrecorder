@@ -54,3 +54,7 @@ Thumbs.db
 
 # Trae specs
 .trae/
+
+# Test reports
+test/test_report_*.md
+
