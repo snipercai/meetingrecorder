@@ -45,15 +45,6 @@ class ASRConfig:
 class LLMConfig:
     """LLM（大语言模型）配置"""
     
-    # 使用模式："local" 使用本地模型，"api" 使用OpenAI兼容API
-    MODE = os.environ.get("LLM_MODE", "api")
-    
-    # 本地模型路径（可以是Hugging Face模型ID或本地路径）
-    MODEL_PATH = "Qwen/Qwen2.5-1.5B-Instruct"
-    
-    # 设备设置（auto/cpu/cuda，仅本地模式有效）
-    DEVICE = "auto"
-    
     # OpenAI兼容API配置
     API_BASE_URL = os.environ.get("LLM_API_BASE_URL", "")
     API_KEY = os.environ.get("LLM_API_KEY", "")
@@ -182,14 +173,13 @@ def validate_config():
         if LogConfig.LEVEL.upper() not in valid_levels:
             raise ValueError(f"日志级别无效，当前值: {LogConfig.LEVEL}，有效值: {valid_levels}")
         
-        # 验证LLM API配置（如果使用API模式）
-        if LLMConfig.MODE == "api":
-            if not LLMConfig.API_BASE_URL:
-                raise ValueError("LLM API地址未配置，请在.env文件中设置LLM_API_BASE_URL")
-            if not LLMConfig.API_KEY:
-                raise ValueError("LLM API密钥未配置，请在.env文件中设置LLM_API_KEY")
-            if not LLMConfig.API_MODEL:
-                raise ValueError("LLM API模型未配置，请在.env文件中设置LLM_API_MODEL")
+        # 验证LLM API配置
+        if not LLMConfig.API_BASE_URL:
+            raise ValueError("LLM API地址未配置，请在.env文件中设置LLM_API_BASE_URL")
+        if not LLMConfig.API_KEY:
+            raise ValueError("LLM API密钥未配置，请在.env文件中设置LLM_API_KEY")
+        if not LLMConfig.API_MODEL:
+            raise ValueError("LLM API模型未配置，请在.env文件中设置LLM_API_MODEL")
         
         return True
         
@@ -206,9 +196,7 @@ if __name__ == "__main__":
         print(f"音频采样率: {AudioConfig.SAMPLE_RATE} Hz")
         print(f"Web服务地址: {WebConfig.HOST}:{WebConfig.PORT}")
         print(f"总结间隔: {SummaryConfig.INTERVAL} 秒")
-        print(f"LLM模式: {LLMConfig.MODE}")
-        if LLMConfig.MODE == "api":
-            print(f"LLM API地址: {LLMConfig.API_BASE_URL}")
-            print(f"LLM API模型: {LLMConfig.API_MODEL}")
+        print(f"LLM API地址: {LLMConfig.API_BASE_URL}")
+        print(f"LLM API模型: {LLMConfig.API_MODEL}")
     except ValueError as e:
         print(f"配置错误: {e}")

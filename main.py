@@ -42,7 +42,6 @@ class MeetingRecorder:
         device: str = None,
         interval: int = None,
         log_level: str = None,
-        llm_mode: str = None,
         llm_api_url: str = None,
         llm_api_key: str = None,
         llm_api_model: str = None
@@ -56,7 +55,6 @@ class MeetingRecorder:
             device: 模型设备（cuda/cpu）
             interval: 总结间隔（秒）
             log_level: 日志级别
-            llm_mode: LLM模式（local/api）
             llm_api_url: LLM API地址
             llm_api_key: LLM API密钥
             llm_api_model: LLM API模型名称
@@ -66,7 +64,6 @@ class MeetingRecorder:
         self.device = device or ASRConfig.DEVICE
         self.interval = interval or SummaryConfig.INTERVAL
         self.log_level = log_level or "INFO"
-        self.llm_mode = llm_mode or LLMConfig.MODE
         self.llm_api_url = llm_api_url
         self.llm_api_key = llm_api_key
         self.llm_api_model = llm_api_model
@@ -132,15 +129,13 @@ class MeetingRecorder:
 
             logger.info("[5/5] 初始化LLM总结器...")
             self.summarizer = Summarizer(
-                device=self.device,
-                mode=self.llm_mode,
                 api_base_url=self.llm_api_url,
                 api_key=self.llm_api_key,
                 api_model=self.llm_api_model
             )
             if not self.summarizer.load_model():
-                raise RuntimeError("LLM模型/客户端初始化失败")
-            logger.info(f"LLM总结器初始化完成，模式: {self.llm_mode}")
+                raise RuntimeError("LLM API客户端初始化失败")
+            logger.info("LLM总结器初始化完成，模式: api")
 
             logger.info("=" * 50)
             logger.info("所有模块初始化完成")
@@ -443,8 +438,7 @@ def parse_arguments():
   python main.py --device cpu             # 使用CPU模式
   python main.py --interval 120           # 每2分钟总结一次
   python main.py --log-level DEBUG        # 开启调试日志
-  python main.py --llm-mode api           # 使用API模式调用LLM
-  python main.py --llm-mode api --llm-api-model gpt-4  # 指定API模型
+  python main.py --llm-api-model gpt-4    # 指定API模型
 
 环境变量:
   LLM_API_BASE_URL  LLM API地址
@@ -490,13 +484,7 @@ def parse_arguments():
         help="日志级别 (默认: INFO)"
     )
 
-    parser.add_argument(
-        "--llm-mode",
-        type=str,
-        choices=["local", "api"],
-        default=LLMConfig.MODE,
-        help=f"LLM模式: local使用本地模型，api使用OpenAI兼容API (默认: {LLMConfig.MODE})"
-    )
+
 
     parser.add_argument(
         "--llm-api-url",
@@ -532,7 +520,6 @@ async def main():
         device=args.device,
         interval=args.interval,
         log_level=args.log_level,
-        llm_mode=args.llm_mode,
         llm_api_url=args.llm_api_url,
         llm_api_key=args.llm_api_key,
         llm_api_model=args.llm_api_model

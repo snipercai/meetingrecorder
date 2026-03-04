@@ -258,7 +258,9 @@ class TestRunner:
             print("1. 测试配置类加载...")
             try:
                 assert hasattr(ASRConfig, "MODEL_PATH"), "ASRConfig缺少MODEL_PATH"
-                assert hasattr(LLMConfig, "MODE"), "LLMConfig缺少MODE"
+                assert hasattr(LLMConfig, "API_BASE_URL"), "LLMConfig缺少API_BASE_URL"
+                assert hasattr(LLMConfig, "API_KEY"), "LLMConfig缺少API_KEY"
+                assert hasattr(LLMConfig, "API_MODEL"), "LLMConfig缺少API_MODEL"
                 assert hasattr(AudioConfig, "SAMPLE_RATE"), "AudioConfig缺少SAMPLE_RATE"
                 assert hasattr(WebConfig, "PORT"), "WebConfig缺少PORT"
                 assert hasattr(SummaryConfig, "INTERVAL"), "SummaryConfig缺少INTERVAL"
@@ -540,8 +542,7 @@ class TestRunner:
 
             print("1. 测试Summarizer类实例化...")
             try:
-                summarizer = Summarizer(mode="api")
-                assert summarizer.mode == "api", "模式设置错误"
+                summarizer = Summarizer()
                 print_result(True, "Summarizer实例化成功")
             except Exception as e:
                 print_result(False, str(e))
@@ -551,15 +552,12 @@ class TestRunner:
 
             print("2. 测试API配置验证...")
             try:
-                if LLMConfig.MODE == "api":
-                    if summarizer.load_model():
-                        print_result(True, "API配置验证通过")
-                    else:
-                        print_result(False, "API配置验证失败，请检查.env文件中的LLM配置")
-                        messages.append("API配置验证失败")
-                        all_passed = False
+                if summarizer.load_model():
+                    print_result(True, "API配置验证通过")
                 else:
-                    print_result(True, "跳过API配置验证（非API模式）")
+                    print_result(False, "API配置验证失败，请检查.env文件中的LLM配置")
+                    messages.append("API配置验证失败")
+                    all_passed = False
             except Exception as e:
                 print_result(False, str(e))
                 all_passed = False
