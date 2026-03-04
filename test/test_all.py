@@ -483,8 +483,9 @@ class TestRunner:
 
             print("1. 测试ASREngine类实例化...")
             try:
-                engine = ASREngine(device="cpu")
+                engine = ASREngine(device="cpu", offline=False)
                 assert engine.device == "cpu", "设备设置错误"
+                assert not engine.offline, "离线模式设置错误"
                 assert engine.model is None, "初始状态模型应为None"
                 assert not engine.is_loaded, "初始状态is_loaded应为False"
                 print_result(True, "ASREngine实例化成功")
@@ -817,7 +818,7 @@ class TestRunner:
         print("\n5. 测试ASR引擎初始化...")
         try:
             from asr_engine import ASREngine
-            engine = ASREngine(device="cpu")
+            engine = ASREngine(device="cpu", offline=False)
             engine.load_model()
             engine.release()
             print_result(True, "ASR引擎初始化成功")

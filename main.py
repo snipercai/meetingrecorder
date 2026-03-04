@@ -42,6 +42,7 @@ class MeetingRecorder:
         device: str = None,
         interval: int = None,
         log_level: str = None,
+        offline: bool = None,
         llm_api_url: str = None,
         llm_api_key: str = None,
         llm_api_model: str = None
@@ -55,6 +56,7 @@ class MeetingRecorder:
             device: 模型设备（cuda/cpu）
             interval: 总结间隔（秒）
             log_level: 日志级别
+            offline: 是否使用离线模式，True表示只使用本地缓存的模型，False表示允许从线上下载模型
             llm_api_url: LLM API地址
             llm_api_key: LLM API密钥
             llm_api_model: LLM API模型名称
@@ -62,6 +64,7 @@ class MeetingRecorder:
         self.host = host or WebConfig.HOST
         self.port = port or WebConfig.PORT
         self.device = device or ASRConfig.DEVICE
+        self.offline = offline or ASRConfig.OFFLINE
         self.interval = interval or SummaryConfig.INTERVAL
         self.log_level = log_level or "INFO"
         self.llm_api_url = llm_api_url
@@ -123,7 +126,7 @@ class MeetingRecorder:
             logger.info("音频采集模块初始化完成")
 
             logger.info("[4/5] 初始化ASR引擎...")
-            self.asr_engine = ASREngine(device=self.device)
+            self.asr_engine = ASREngine(device=self.device, offline=self.offline)
             self.asr_engine.load_model()
             logger.info("ASR引擎初始化完成")
 
@@ -439,6 +442,7 @@ def parse_arguments():
   python main.py --interval 120           # 每2分钟总结一次
   python main.py --log-level DEBUG        # 开启调试日志
   python main.py --llm-api-model gpt-4    # 指定API模型
+  python main.py --offline                # 使用离线模式，只使用本地缓存的模型
 
 环境变量:
   LLM_API_BASE_URL  LLM API地址
@@ -467,6 +471,13 @@ def parse_arguments():
         choices=["cuda", "cpu", "auto"],
         default=ASRConfig.DEVICE,
         help=f"模型设备 (默认: {ASRConfig.DEVICE})"
+    )
+
+    parser.add_argument(
+        "--offline",
+        action="store_true",
+        default=ASRConfig.OFFLINE,
+        help=f"是否使用离线模式，只使用本地缓存的模型 (默认: {ASRConfig.OFFLINE})"
     )
 
     parser.add_argument(
@@ -520,6 +531,7 @@ async def main():
         device=args.device,
         interval=args.interval,
         log_level=args.log_level,
+        offline=args.offline,
         llm_api_url=args.llm_api_url,
         llm_api_key=args.llm_api_key,
         llm_api_model=args.llm_api_model

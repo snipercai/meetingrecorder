@@ -41,20 +41,22 @@ class ASREngine:
     # 默认模型名称
     DEFAULT_MODEL_NAME = "Qwen/Qwen3-ASR-0.6B"
 
-    def __init__(self, model_path: Optional[str] = None, device: str = "cuda"):
+    def __init__(self, model_path: Optional[str] = None, device: str = "cuda", offline: bool = False):
         """
         初始化ASR引擎
 
         Args:
             model_path: 本地模型路径，如果为None则使用默认模型名称
             device: 推理设备，支持"cuda"或"cpu"
+            offline: 是否使用离线模式，True表示只使用本地缓存的模型，False表示允许从线上下载模型
         """
         self.model_path = model_path
         self.device = device
+        self.offline = offline
         self.model = None
         self._is_loaded = False
 
-        logger.info(f"初始化ASR引擎，设备: {device}，模型路径: {model_path or '自动下载'}")
+        logger.info(f"初始化ASR引擎，设备: {device}，模型路径: {model_path or '自动下载'}，离线模式: {offline}")
 
     def _check_device_availability(self) -> str:
         """
@@ -122,7 +124,7 @@ class ASREngine:
                 device_map=actual_device if actual_device == "cuda" else "cpu",
                 max_inference_batch_size=1,
                 revision="main",
-                local_files_only=True,
+                local_files_only=self.offline,
             )
             logger.debug("模型加载完成")
 

@@ -35,6 +35,9 @@ class ASRConfig:
     # 设备设置（auto/cpu/cuda）
     DEVICE = os.environ.get("ASR_DEVICE", "auto")
     
+    # 离线模式设置（True表示只使用本地缓存的模型，False表示允许从线上下载模型）
+    OFFLINE = os.environ.get("ASR_OFFLINE", "false").lower() == "true"
+    
     # 语言设置（中文）
     LANGUAGE = "zh"
     
