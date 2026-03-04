@@ -48,6 +48,12 @@ python main.py
 # 启动服务（离线模式，使用本地缓存的模型）
 python main.py --offline
 
+# 启动服务（指定设备和离线模式）
+python main.py --device cpu --offline
+
+# 启动服务（指定端口和离线模式）
+python main.py --port 9000 --offline
+
 # 访问 Web 界面
 # http://localhost:8080
 ```
