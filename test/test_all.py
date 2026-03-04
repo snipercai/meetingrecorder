@@ -210,15 +210,15 @@ class TestRunner:
             "web": self.test_web_server,
         }
 
-    def run_test(self, test_name: str, test_func: Callable) -> Tuple[bool, str]:
+    def run_test(self, test_name: str, test_func: Callable, mode: str = "online") -> Tuple[bool, str]:
         """运行单个测试"""
-        print_color(f"\n>>> 运行测试: {test_name}", "yellow")
+        print_color(f"\n>>> 运行测试: {test_name} (模式: {mode})" , "yellow")
         start_time = time.time()
         try:
             if asyncio.iscoroutinefunction(test_func):
-                result, message = asyncio.run(test_func())
+                result, message = asyncio.run(test_func(mode))
             else:
-                result, message = test_func()
+                result, message = test_func(mode)
             elapsed = time.time() - start_time
             print_result(result, f"{message} (耗时: {elapsed:.2f}秒)")
 
@@ -235,7 +235,7 @@ class TestRunner:
 
             return False, str(e)
 
-    def test_config(self) -> Tuple[bool, str]:
+    def test_config(self, mode: str = "online") -> Tuple[bool, str]:
         """测试配置模块"""
         print_header("测试配置模块 (config.py)")
 
@@ -320,7 +320,7 @@ class TestRunner:
             print_result(False, f"导入配置模块失败: {e}")
             return False, f"导入失败: {e}"
 
-    def test_logger(self) -> Tuple[bool, str]:
+    def test_logger(self, mode: str = "online") -> Tuple[bool, str]:
         """测试日志模块"""
         print_header("测试日志模块 (logger.py)")
 
@@ -381,7 +381,7 @@ class TestRunner:
             print_result(False, f"导入日志模块失败: {e}")
             return False, f"导入失败: {e}"
 
-    def test_audio_capture(self) -> Tuple[bool, str]:
+    def test_audio_capture(self, mode: str = "online") -> Tuple[bool, str]:
         """测试音频采集模块"""
         print_header("测试音频采集模块 (audio_capture.py)")
 
@@ -465,7 +465,7 @@ class TestRunner:
             print_result(False, f"导入音频采集模块失败: {e}")
             return False, f"导入失败: {e}"
 
-    def test_asr_engine(self) -> Tuple[bool, str]:
+    def test_asr_engine(self, mode: str = "online") -> Tuple[bool, str]:
         """测试ASR引擎模块"""
         print_header("测试ASR引擎模块 (asr_engine.py)")
 
@@ -483,9 +483,11 @@ class TestRunner:
 
             print("1. 测试ASREngine类实例化...")
             try:
-                engine = ASREngine(device="cpu", offline=False)
+                # 根据mode参数设置offline标志
+                offline = (mode == "offline")
+                engine = ASREngine(device="cpu", offline=offline)
                 assert engine.device == "cpu", "设备设置错误"
-                assert not engine.offline, "离线模式设置错误"
+                assert engine.offline == offline, "离线模式设置错误"
                 assert engine.model is None, "初始状态模型应为None"
                 assert not engine.is_loaded, "初始状态is_loaded应为False"
                 print_result(True, "ASREngine实例化成功")
@@ -500,7 +502,7 @@ class TestRunner:
                 engine.load_model()
                 assert engine.is_loaded, "模型加载后is_loaded应为True"
                 assert engine.model is not None, "模型加载后model不应为None"
-                print_result(True, "模型加载成功")
+                print_result(True, f"{mode}模式模型加载成功")
             except ModelLoadError as e:
                 print_result(False, f"模型加载失败: {e}")
                 messages.append(f"模型加载失败: {e}")
@@ -530,7 +532,7 @@ class TestRunner:
             print_result(False, f"导入ASR引擎模块失败: {e}")
             return False, f"导入失败: {e}"
 
-    def test_summarizer(self) -> Tuple[bool, str]:
+    def test_summarizer(self, mode: str = "online") -> Tuple[bool, str]:
         """测试总结模块"""
         print_header("测试总结模块 (summarizer.py)")
 
@@ -610,7 +612,7 @@ class TestRunner:
             print_result(False, f"导入总结模块失败: {e}")
             return False, f"导入失败: {e}"
 
-    def test_file_manager(self) -> Tuple[bool, str]:
+    def test_file_manager(self, mode: str = "online") -> Tuple[bool, str]:
         """测试文件管理模块"""
         print_header("测试文件管理模块 (file_manager.py)")
 
@@ -691,7 +693,7 @@ class TestRunner:
             print_result(False, f"导入文件管理模块失败: {e}")
             return False, f"导入失败: {e}"
 
-    async def test_web_server(self) -> Tuple[bool, str]:
+    async def test_web_server(self, mode: str = "online") -> Tuple[bool, str]:
         """测试Web服务器模块"""
         print_header("测试Web服务器模块 (web_server.py)")
 
@@ -759,14 +761,14 @@ class TestRunner:
             print_result(False, f"导入Web服务器模块失败: {e}")
             return False, f"导入失败: {e}"
 
-    def run_smoke_test(self) -> Tuple[bool, str]:
+    def run_smoke_test(self, mode: str = "online") -> Tuple[bool, str]:
         """运行端到端冒烟测试"""
         print_header("端到端冒烟测试")
 
         all_passed = True
         messages = []
 
-        print_color("冒烟测试将验证系统各模块能否正常协同工作", "yellow")
+        print_color(f"冒烟测试将验证系统各模块能否正常协同工作（模式: {mode}", "yellow")
         print_color("注意：此测试需要完整的运行环境（ASR模型、LLM API等）", "yellow")
 
         print("\n1. 测试配置加载...")
@@ -818,10 +820,12 @@ class TestRunner:
         print("\n5. 测试ASR引擎初始化...")
         try:
             from asr_engine import ASREngine
-            engine = ASREngine(device="cpu", offline=False)
+            # 根据mode参数设置offline标志
+            offline = (mode == "offline")
+            engine = ASREngine(device="cpu", offline=offline)
             engine.load_model()
             engine.release()
-            print_result(True, "ASR引擎初始化成功")
+            print_result(True, f"ASR引擎初始化成功（{mode}模式）")
         except Exception as e:
             print_result(False, str(e))
             all_passed = False
@@ -871,13 +875,13 @@ class TestRunner:
         message = "冒烟测试完成" if all_passed else "; ".join(messages)
         return all_passed, message
 
-    def run_all_tests(self) -> Dict[str, Tuple[bool, str]]:
+    def run_all_tests(self, mode: str = "online") -> Dict[str, Tuple[bool, str]]:
         """运行所有模块测试"""
         print_header("运行所有模块测试")
 
         results = {}
         for name, test_func in self.test_modules.items():
-            results[name] = self.run_test(name, test_func)
+            results[name] = self.run_test(name, test_func, mode)
 
         return results
 
@@ -961,6 +965,14 @@ def main():
         help="不生成测试报告文件"
     )
 
+    parser.add_argument(
+        "--mode",
+        type=str,
+        choices=["online", "offline"],
+        default="online",
+        help="指定测试模式（online/offline）"
+    )
+
     args = parser.parse_args()
 
     runner = TestRunner()
@@ -974,8 +986,8 @@ def main():
 
     if args.smoke:
         if runner.report:
-            runner.report.start("smoke_test")
-        result, message = runner.run_smoke_test()
+            runner.report.start(f"smoke_test_{args.mode}")
+        result, message = runner.run_smoke_test(args.mode)
         print_summary({"smoke": (result, message)})
         if runner.report:
             runner.report.end()
@@ -985,8 +997,8 @@ def main():
 
     if args.module:
         if runner.report:
-            runner.report.start(f"module_{args.module}")
-        result, message = runner.run_test(args.module, runner.test_modules[args.module])
+            runner.report.start(f"module_{args.module}_{args.mode}")
+        result, message = runner.run_test(args.module, runner.test_modules[args.module], args.mode)
         print_summary({args.module: (result, message)})
         if runner.report:
             runner.report.end()
@@ -995,8 +1007,8 @@ def main():
         return
 
     if runner.report:
-        runner.report.start("all_modules")
-    results = runner.run_all_tests()
+        runner.report.start(f"all_modules_{args.mode}")
+    results = runner.run_all_tests(args.mode)
     print_summary(results)
     if runner.report:
         runner.report.end()

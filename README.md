@@ -10,7 +10,8 @@
 - **智能会议总结**：支持 OpenAI 兼容 API 调用 LLM
 - **Web 实时显示**：极简深色主题界面，WebSocket 实时推送
 - **Markdown 记录**：自动保存会议总结到文件
-- **Hugging Face 离线模式**：支持使用本地缓存的模型，避免重复下载
+- **Hugging Face 模型管理**：首次运行自动下载模型到本地，支持离线模式使用本地模型
+- **灵活的测试模式**：支持在线和离线模式的测试
 
 ## 仓库地址
 https://github.com/snipercai/meeting-recorder
@@ -42,10 +43,10 @@ meeting-recorder/
 # 安装依赖
 pip install -r requirements.txt
 
-# 启动服务（默认在线模式，第一次运行会下载模型）
+# 启动服务（默认在线模式，第一次运行会下载模型到本地model目录）
 python main.py
 
-# 启动服务（离线模式，使用本地缓存的模型）
+# 启动服务（离线模式，使用本地已下载的模型）
 python main.py --offline
 
 # 启动服务（指定设备和离线模式）
@@ -56,6 +57,25 @@ python main.py --port 9000 --offline
 
 # 访问 Web 界面
 # http://localhost:8080
+```
+
+### 模型管理
+- **首次运行**：系统会自动从Hugging Face下载Qwen3-ASR-0.6B模型到本地`model`目录
+- **离线模式**：使用`--offline`参数启动时，系统会使用本地已下载的模型，无需网络连接
+- **模型路径**：模型默认存储在`model`目录中，采用Hugging Face缓存格式
+
+### 测试模式
+系统支持在线和离线模式的测试，可通过`--mode`参数指定：
+
+```bash
+# 在线模式测试
+python test/test_all.py --module asr --mode online
+
+# 离线模式测试
+python test/test_all.py --module asr --mode offline
+
+# 离线模式冒烟测试
+python test/test_all.py --smoke --mode offline
 ```
 
 ## 配置管理
@@ -75,6 +95,7 @@ python main.py --port 9000 --offline
 | WEB_HOST | Web服务主机 | 0.0.0.0 | WEB_HOST |
 | WEB_PORT | Web服务端口 | 8080 | WEB_PORT |
 | SUMMARY_INTERVAL | 总结间隔（秒） | 60 | SUMMARY_INTERVAL |
+| MODEL_DIR | 模型存储目录 | ./model | - |
 
 ## 核心功能模块分析
 

@@ -25,6 +25,10 @@ PROJECT_ROOT = Path(__file__).parent.absolute()
 OUTPUT_DIR = PROJECT_ROOT / "output"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
+# 模型存储目录
+MODEL_DIR = PROJECT_ROOT / "model"
+MODEL_DIR.mkdir(parents=True, exist_ok=True)
+
 
 class ASRConfig:
     """ASR（自动语音识别）模型配置"""

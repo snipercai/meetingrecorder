@@ -43,6 +43,7 @@ output/
 # Model cache
 .cache/
 models/
+model/
 
 # Environment variables
 .env

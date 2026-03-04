@@ -7,6 +7,12 @@ ASR引擎模块
 import logging
 from typing import Callable, Optional, Union, Generator
 from pathlib import Path
+import os
+import sys
+
+# 添加项目根目录到系统路径，以便导入config
+sys.path.append(str(Path(__file__).parent.absolute()))
+from config import MODEL_DIR
 
 # 配置日志
 logger = logging.getLogger(__name__)
@@ -115,6 +121,54 @@ class ASREngine:
 
             # 设置数据类型
             dtype = torch.bfloat16 if actual_device == "cuda" else torch.float32
+
+            # 构建本地模型路径
+            model_name = model_identifier.split("/")[-1] if "/" in model_identifier else model_identifier
+            local_model_path = MODEL_DIR / model_name
+            logger.info(f"本地模型路径: {local_model_path}")
+
+            # 检查本地模型是否存在
+            if local_model_path.exists() and local_model_path.is_dir():
+                logger.info("本地模型存在，使用本地模型")
+                model_identifier = str(local_model_path)
+            elif (MODEL_DIR / f"models--Qwen--{model_name}").exists():
+                # 检查Hugging Face缓存格式的模型
+                hf_cache_path = MODEL_DIR / f"models--Qwen--{model_name}"
+                snapshots_dir = hf_cache_path / "snapshots"
+                if snapshots_dir.exists():
+                    # 查找最新的snapshot
+                    snapshot_dirs = list(snapshots_dir.iterdir())
+                    if snapshot_dirs:
+                        latest_snapshot = max(snapshot_dirs, key=lambda x: x.stat().st_mtime)
+                        logger.info(f"找到Hugging Face缓存格式的模型: {latest_snapshot}")
+                        model_identifier = str(latest_snapshot)
+            elif not self.offline:
+                # 离线模式为False时，从Hugging Face下载模型到本地
+                logger.info("本地模型不存在，从Hugging Face下载模型到本地")
+                try:
+                    # 对于Qwen3-ASR模型，我们使用qwen_asr库的下载方式
+                    # 先尝试直接使用qwen_asr的from_pretrained下载到指定目录
+                    self.model = Qwen3ASRModel.from_pretrained(
+                        model_identifier,
+                        dtype=dtype,
+                        device_map=actual_device if actual_device == "cuda" else "cpu",
+                        max_inference_batch_size=1,
+                        revision="main",
+                        local_files_only=False,
+                        cache_dir=str(MODEL_DIR)
+                    )
+                    logger.info("模型下载成功")
+                    self._is_loaded = True
+                    logger.info(f"模型加载成功，设备: {actual_device}")
+                    return
+                except Exception as download_error:
+                    logger.warning(f"使用cache_dir下载模型失败: {download_error}")
+                    logger.info("尝试使用默认缓存目录下载模型")
+            else:
+                # 离线模式且本地模型不存在
+                error_msg = f"离线模式下本地模型不存在: {local_model_path}"
+                logger.error(error_msg)
+                raise ModelLoadError(error_msg)
 
             # 加载模型
             logger.debug("加载模型...")
